@@ -5,6 +5,7 @@ import {
   UIMessage,
 } from 'ai';
 import { DEFAULT_MODEL } from '@/lib/ai/provider/models';
+import { rateLimit, createRateLimitResponse, getRateLimitHeaders, RATE_LIMITS } from '@/lib/rate-limit';
 
 export const maxDuration = 60;
 
@@ -45,13 +46,27 @@ interface ChatRequestBody {
 
 export async function POST(req: Request) {
   try {
+    // Rate limiting - use IP or forwarded IP as identifier
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() 
+      || req.headers.get('x-real-ip') 
+      || 'anonymous';
+    
+    const rateLimitResult = await rateLimit(ip, RATE_LIMITS.chat);
+    
+    if (!rateLimitResult.success) {
+      return createRateLimitResponse(rateLimitResult);
+    }
+
     const body: ChatRequestBody = await req.json();
     const { messages, model = DEFAULT_MODEL, role = 'code', type = 'prompt-engine' } = body;
 
     if (!messages || messages.length === 0) {
       return new Response(JSON.stringify({ error: 'Messages are required' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...getRateLimitHeaders(rateLimitResult),
+        },
       });
     }
 
