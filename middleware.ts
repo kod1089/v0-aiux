@@ -1,14 +1,18 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
+// Supabase auth middleware - temporarily disabled until @supabase/ssr is installed
+// TODO: Re-enable when running `pnpm add @supabase/ssr @supabase/supabase-js`
 export async function middleware(request: NextRequest) {
-  // Supabase session update - gracefully handle if @supabase/ssr not installed
-  try {
-    const { updateSession } = await import('@/lib/supabase/proxy')
-    return await updateSession(request)
-  } catch {
-    // @supabase/ssr not installed yet, allow request to continue
-    return NextResponse.next()
-  }
+  // Pass through all requests for now
+  return NextResponse.next()
+  
+  // Uncomment below when @supabase/ssr is installed:
+  // try {
+  //   const { updateSession } = await import('@/lib/supabase/proxy')
+  //   return await updateSession(request)
+  // } catch {
+  //   return NextResponse.next()
+  // }
 }
 
 export const config = {
